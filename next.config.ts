@@ -1,4 +1,3 @@
-import { withPayload } from '@payloadcms/next/withPayload'
 import type { NextConfig } from 'next'
 import path from 'path'
 import { fileURLToPath } from 'url'
@@ -18,6 +17,15 @@ const makePublicPreviewOrigin = (() => {
   }
 })()
 
+const siteURL =
+  process.env.NEXT_PUBLIC_SITE_URL ||
+  process.env.FIGMA_PUBLIC_URL ||
+  (process.env.VERCEL_PROJECT_PRODUCTION_URL
+    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+    : process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : 'http://localhost:3000')
+
 const nextConfig: NextConfig = {
   webpack: (webpackConfig) => {
     webpackConfig.resolve.extensionAlias = {
@@ -32,10 +40,6 @@ const nextConfig: NextConfig = {
     root: path.resolve(dirname),
   },
   output: 'standalone',
-  images: {
-    loader: 'custom',
-    loaderFile: './figma-image-loader.ts',
-  },
   // Don't block publishing or preview deploys on errors if the emitted JS is valid
   typescript: {
     ignoreBuildErrors: true,
@@ -43,7 +47,7 @@ const nextConfig: NextConfig = {
   // `next dev` serves the Make preview at a per-sandbox cross-origin host. Next
   // blocks its dev resources (`/_next/*`, HMR WebSocket, internal endpoints)
   // unless the origin is listed here, and a blocked HMR socket stalls Turbopack
-  // so the Payload `/admin` panel renders blank in the preview iframe.
+  // so the preview remains available in the Make iframe.
   // Dev-only - ignored by `next build`.
   //
   allowedDevOrigins: makePublicPreviewOrigin ? [makePublicPreviewOrigin] : [],
@@ -52,28 +56,25 @@ const nextConfig: NextConfig = {
   experimental: {
     // Caps static build workers (~250-380 MB each) to lower `next build` peak memory
     cpus: 2,
-    // Payload Admin uses Next Server Actions. In the Make preview proxy, the
-    // browser origin is the public sandbox host while `x-forwarded-host` points
-    // at the local dev server. Allow only that exact platform-provisioned host.
+    // Allow only the exact platform-provisioned preview host.
     serverActions: {
       allowedOrigins: makePublicPreviewOrigin ? [makePublicPreviewOrigin] : [],
     },
   },
   env: {
-    NEXT_PUBLIC_SITE_URL: process.env.FIGMA_PUBLIC_URL || 'http://localhost:3000',
+    NEXT_PUBLIC_SITE_URL: siteURL,
     // NOTE: Do not add FIGMA_OAUTH_CLIENT_SECRET, FIGMA_CONTENT_API_ACCESS_KEY,
     // or any other credential here. Values placed in `env` are inlined into
     // the JavaScript bundle by Next.js at build time and become readable by
     // anyone who can load the app's client assets. Server-side code
-    // (payload.config.ts, route handlers, server components) can still read
-    // these values from `process.env.*` without declaring them here. Only
+    // Route handlers and server components can still read these values from
+    // `process.env.*` without declaring them here. Only
     // public, non-secret values that explicitly need to be available in
-    // browser code should be added - and those should use the `NEXT_PUBLIC_*`
-    // naming convention.
+    // browser code should be added - and those should use the `NEXT_PUBLIC_*` naming convention.
     FIGMA_CONTENT_API_CONTENT_SYSTEM_ID: process.env.FIGMA_CONTENT_API_CONTENT_SYSTEM_ID,
     FIGMA_CONTENT_API_URL: process.env.FIGMA_CONTENT_API_URL,
     FIGMA_OAUTH_CLIENT_ID: process.env.FIGMA_OAUTH_CLIENT_ID,
   },
 }
 
-export default withPayload(nextConfig, { devBundleServerPackages: false })
+export default nextConfig

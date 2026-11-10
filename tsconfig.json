@@ -18,11 +18,10 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"],
-      "@payload-config": ["./src/payload.config.ts"]
+      "@/*": ["./src/*"]
     },
     "target": "ES2022"
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", ".next/dev/types/**/*.ts"],
-  "exclude": ["node_modules", "vite.config.*"]
+  "exclude": ["node_modules", "supabase", "vite.config.*"]
 }
